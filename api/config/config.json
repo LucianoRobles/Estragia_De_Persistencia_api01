@@ -4,7 +4,23 @@
     "password": "lucholuk01",
     "database": "api_v1",
     "host": "localhost",
-    "dialect": "mysql",
+    "dialect": "mariadb",
+    "operatorsAliases": false
+  },
+  "test": {
+    "username": "root",
+    "password": "lucholuk01",
+    "database": "api_v1",
+    "host": "localhost",
+    "dialect": "mariadb",
+    "operatorsAliases": false
+  },
+  "production": {
+    "username": "root",
+    "password": "lucholuk01",
+    "database": "api_v1",
+    "host": "localhost",
+    "dialect": "mariadb",
     "operatorsAliases": false
   }
 }

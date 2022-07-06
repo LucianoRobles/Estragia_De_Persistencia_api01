@@ -1,82 +1,75 @@
-var express = require("express");
-var router = express.Router();
-var models = require("../models");
+const express = require("express");
+const router = express.Router();
+const models = require("../models");
+const autenticacion = require("../middlewares/autentication");
 
-router.get("/", (req, res) => {
-  console.log("Esto es un mensaje para ver en consola");
+router.get("/", autenticacion, (req, res) => {
+  const limit = req.query.limit;
+  const offset = req.query.offset;
   models.materia
     .findAll({
-      attributes: ["id", "nombre", "id_carrera"]
+      attributes: ["id", "nombre", "id_carrera"],
+      limit: limit ? parseInt(limit) : null,
+      offset: offset ? parseInt(offset) : null,
     })
-    .then(materia => res.send(materia))
-    .catch(() => res.sendStatus(500));
+    .then((materia) => res.send(materia))
+    .catch((error) => res.status(500).send({ error }));
 });
 
-router.post("/", (req, res) => {
+router.post("/", autenticacion, (req, res) => {
   models.materia
-    .create({ nombre: req.body.nombre,id_carrera : req.body.id_carrera})
-    .then(materia => res.status(201).send({ materia }))
-    .catch(error => {
-      if (error == "SequelizeUniqueConstraintError: Validation error") {
-        res.status(400).send('Bad request: existe otra materia con el mismo nombre')
-      }
-      else {
-        console.log(`Error al intentar insertar en la base de datos: ${error}`)
-        res.sendStatus(500)
-      }
-    });
+    .create({ nombre: req.body.nombre, id_carrera: req.body.id_carrera })
+    .then((materia) => res.status(201).send({ id: materia.id }))
+    .catch((error) => res.status(500).send({ error }));
+});
+
+router.get("/:id", autenticacion, (req, res) => {
+  findMateria(req.params.id, {
+    onSuccess: (materia) => res.send(materia),
+    onNotFound: () =>
+      res.status(404).send({ message: "No existe materia con ese ID." }),
+    onError: (error) => res.status(500).send({ error }),
+  });
+});
+
+router.put("/:id", autenticacion, (req, res) => {
+  const onSuccess = (materia) => {
+    materia
+      .update({ nombre: req.body.nombre }, { fields: ["nombre"] })
+      .then(() =>
+        res.status(200).send({ message: "Materia actualizada exitosamente." }))
+      .catch((error) => res.status(500).send({ error }));
+  }
+  findMateria(req.params.id, {
+    onSuccess,
+    onNotFound: () =>
+      res.status(404).send({ message: "No existe materia con ese ID." }),
+    onError: (error) => res.status(500).send({ error }),
+  });
+});
+
+router.delete("/:id", autenticacion, (req, res) => {
+  const onSuccess = (materia) => {
+    materia
+      .destroy()
+      .then(() => res.status(200).send({ message: "Materia eliminada exitosamente."}))
+      .catch((error) => res.status(500).send({ error }));
+  }    
+  findMateria(req.params.id, {
+    onSuccess,
+    onNotFound: () => res.status(404).send({ message: "No existe materia con ese ID."}),
+    onError: (error) => res.status(500).send({ error }),
+  });
 });
 
 const findMateria = (id, { onSuccess, onNotFound, onError }) => {
   models.materia
     .findOne({
-      attributes: ["id", "nombre","id_carrera"],
-      where: { id }
+      attributes: ["id", "nombre", "id_carrera"],
+      where: { id },
     })
-    .then(materia => (materia ? onSuccess(materia) : onNotFound()))
-    .catch(() => onError());
+    .then((materia) => (materia ? onSuccess(materia) : onNotFound()))
+    .catch((error) => onError(error));
 };
-
-router.get("/:id", (req, res) => {
-  findMateria(req.params.id, {
-    onSuccess: materia => res.send(materia),
-    onNotFound: () => res.sendStatus(404),
-    onError: () => res.sendStatus(500)
-  });
-});
-
-router.put("/:id", (req, res) => {
-  const onSuccess = materia =>
-    materia
-      .update({ nombre: req.body.nombre }, { fields: ["nombre"] })
-      .then(() => res.sendStatus(200))
-      .catch(error => {
-        if (error == "SequelizeUniqueConstraintError: Validation error") {
-          res.status(400).send('Bad request: existe otra materia con el mismo nombre')
-        }
-        else {
-          console.log(`Error al intentar actualizar la base de datos: ${error}`)
-          res.sendStatus(500)
-        }
-      });
-    findMateria(req.params.id, {
-    onSuccess,
-    onNotFound: () => res.sendStatus(404),
-    onError: () => res.sendStatus(500)
-  });
-});
-
-router.delete("/:id", (req, res) => {
-  const onSuccess = materia =>
-    materia
-      .destroy()
-      .then(() => res.sendStatus(200))
-      .catch(() => res.sendStatus(500));
-  findMateria(req.params.id, {
-    onSuccess,
-    onNotFound: () => res.sendStatus(404),
-    onError: () => res.sendStatus(500)
-  });
-});
 
 module.exports = router;
